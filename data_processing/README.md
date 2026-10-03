@@ -3,6 +3,13 @@
 Six cameras -> people detection and 3D body pose (SAM3 + SAM 3D Body) -> floor positions -> multi-camera tracking -> `frames.jsonl`.
 All settings (model paths, thresholds, tracking parameters) are in `config/pipeline.yaml`.
 
+## Get the code
+```bash
+git clone --recursive https://github.com/michaelmunje/steps.git && cd steps/data_processing
+```
+(`git submodule update --init` in an existing clone.) SAM 3D Body comes from a fork pinned as a submodule,
+`container/sam-3d-body` (github.com/michaelmunje/sam-3d-body, branch `steps`: per-camera intrinsics for 2D keypoints).
+
 ## Run
 On a machine with an A100/H100 GPU, from this directory:
 ```bash

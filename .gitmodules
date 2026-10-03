@@ -1,0 +1,4 @@
+[submodule "data_processing/container/sam-3d-body"]
+	path = data_processing/container/sam-3d-body
+	url = https://github.com/michaelmunje/sam-3d-body.git
+	branch = steps
