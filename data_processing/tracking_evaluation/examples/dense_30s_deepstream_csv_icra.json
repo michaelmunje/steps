@@ -1,0 +1,30 @@
+{
+  "selection": {
+    "start_s": 0,
+    "end_s": 30,
+    "source_fps": 20,
+    "frame_step": 2,
+    "frame_origin": 0
+  },
+  "metric_config": {
+    "max_distance_m": 1.0,
+    "similarity": "linear",
+    "similarity_scale_m": 1.0
+  },
+  "roi": [-4, 14, -3, 15],
+  "notes": [
+    "Preferred dense DeepStream producer CSV with exact source-header joins through its frame ledger.",
+    "GT0 is explicitly unavailable and scored empty; GT2 is processed-empty. Preserve known producer yaw unchanged and retain all emitted states.",
+    "Calibration is producer-attested; see the published alignment and detailed comparison report."
+  ],
+  "sequences": [
+    {
+      "name": "deepstream",
+      "ground_truth": "/robodata/gdc_atrium/ICRA_GDC/dense_pipeline_eval_20260915/inputs/ground_truth.icra.json",
+      "predictions": "/robodata/gdc_atrium/ICRA_GDC/deepstream/dense_first90s_20hz_tracks.csv",
+      "prediction_format": "deepstream-csv",
+      "deepstream_frame_ledger": "/robodata/gdc_atrium/ICRA_GDC/deepstream/dense_first90s_20hz_frames.csv",
+      "alignment": "/robodata/gdc_atrium/ICRA_GDC/dense_pipeline_eval_20260915/deepstream_alignment.json"
+    }
+  ]
+}

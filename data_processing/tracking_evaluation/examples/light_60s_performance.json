@@ -1,0 +1,28 @@
+{
+  "notes": [
+    "Provisional runtime and implementation check, not an adjudicated tracking benchmark.",
+    "Light GT12 has unresolved identity/position discontinuities around 3.6–6.4 seconds. Only supplied reviewed-valid frames are scored; omitted frames are not empty scenes.",
+    "Full-scene scope is selected for this example. It is not a decision about the final benchmark ROI."
+  ],
+  "metric_config": {
+    "max_distance_m": 1.0,
+    "similarity": "linear",
+    "similarity_scale_m": 1.0
+  },
+  "sequences": [
+    {
+      "name": "tejas_light_60s",
+      "ground_truth": "/robodata/gdc_atrium/atrium_tracking_comparator/users/zhengpengen/9da0a3a1df994f5b9c92408afd6d6b43_tejas_light_60s/ground_truth.json",
+      "predictions": "/robodata/gdc_atrium/atrium_tracking_comparator/sources/light_20260827_103001_20hz_20260909",
+      "prediction_format": "sam3",
+      "prediction_policy": "annotator-observed",
+      "selection": {
+        "start_s": 0.0,
+        "end_s": 60.0,
+        "frame_step": 4,
+        "frame_origin": 0,
+        "source_fps": 20.0
+      }
+    }
+  ]
+}

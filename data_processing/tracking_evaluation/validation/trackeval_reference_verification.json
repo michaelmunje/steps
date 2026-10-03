@@ -1,0 +1,81 @@
+{
+  "status": "passed",
+  "random_seed": 20260914,
+  "random_sequences": 30,
+  "edge_case_sequences": 3,
+  "alphas": 19,
+  "sequence_comparisons": 132,
+  "aggregate_comparisons": 4,
+  "scalar_values_checked": 16456,
+  "maximum_absolute_difference": 1.1102230246251565e-16,
+  "python": "3.13.13 | packaged by Anaconda, Inc. | (main, Apr 14 2026, 06:19:41) [GCC 14.3.0]",
+  "numpy": "2.5.3",
+  "scipy": "1.18.1",
+  "reference": {
+    "repository": "https://github.com/JonathonLuiten/TrackEval",
+    "commit": "12c8791b303e0a0b50f753af204249e622d0281a",
+    "files": {
+      "trackeval/metrics/hota.py": {
+        "url": "https://raw.githubusercontent.com/JonathonLuiten/TrackEval/12c8791b303e0a0b50f753af204249e622d0281a/trackeval/metrics/hota.py",
+        "sha256": "c582255c3d36bdb49c3ceeb2a5bd912cee009190dfcfe465b4173d03aaa97d6a",
+        "bytes": 10504
+      },
+      "trackeval/metrics/identity.py": {
+        "url": "https://raw.githubusercontent.com/JonathonLuiten/TrackEval/12c8791b303e0a0b50f753af204249e622d0281a/trackeval/metrics/identity.py",
+        "sha256": "e76b1bdcbf5b193662431596a984cf70a5be32e903eb5f2a3d9921b4762f93ba",
+        "bytes": 6214
+      },
+      "trackeval/metrics/_base_metric.py": {
+        "url": "https://raw.githubusercontent.com/JonathonLuiten/TrackEval/12c8791b303e0a0b50f753af204249e622d0281a/trackeval/metrics/_base_metric.py",
+        "sha256": "dac8b87bf3801269aa280b1cf91184f483de4f4e5c158bd07a4b1733b1a5722b",
+        "bytes": 5025
+      },
+      "LICENSE": {
+        "url": "https://raw.githubusercontent.com/JonathonLuiten/TrackEval/12c8791b303e0a0b50f753af204249e622d0281a/LICENSE",
+        "sha256": "f7e548c5729e464d878dd4abf691e323bbea028a756d08395d88b83e43dd2d86",
+        "bytes": 1072
+      }
+    }
+  },
+  "reference_shims": [
+    "identity timing decorator",
+    "default/config merge without printing",
+    "legacy np.float/np.int aliases"
+  ],
+  "undefined_convention": "empty IDF1 is null in our output and zero in TrackEval; all defined values compared",
+  "checks": [
+    {
+      "similarity": "linear",
+      "backend": "stdlib_hungarian",
+      "sequences": 33,
+      "aggregate_checked": true,
+      "aggregate_HOTA": 0.2238102963623648,
+      "aggregate_IDF1": 0.38671875
+    },
+    {
+      "similarity": "linear",
+      "backend": "scipy",
+      "sequences": 33,
+      "aggregate_checked": true,
+      "aggregate_HOTA": 0.2238102963623648,
+      "aggregate_IDF1": 0.38671875
+    },
+    {
+      "similarity": "gaussian",
+      "backend": "stdlib_hungarian",
+      "sequences": 33,
+      "aggregate_checked": true,
+      "aggregate_HOTA": 0.3157474519763541,
+      "aggregate_IDF1": 0.38671875
+    },
+    {
+      "similarity": "gaussian",
+      "backend": "scipy",
+      "sequences": 33,
+      "aggregate_checked": true,
+      "aggregate_HOTA": 0.3157474519763541,
+      "aggregate_IDF1": 0.38671875
+    }
+  ],
+  "implementation_sha256": "c317f0838ebdebbf2312281b56be1767c58f2815bb0f14f659d981dfe4feb59f"
+}

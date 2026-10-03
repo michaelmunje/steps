@@ -1,0 +1,41 @@
+# Pipeline config for pipeline/pipeline.py. Paths are relative to this file.
+
+paths:
+  cameras: .                                                  # cam_N_intrinsic_new.yaml files
+  extrinsics: extrinsics_8_14.yaml
+  sam3_checkpoint: ../models/sam3/sam3.pt                     # SAM3 weights (facebook/sam3)
+  sam3d_body_checkpoint: ../models/sam-3d-body-dinov3/model.ckpt
+  mhr_model: ../models/sam-3d-body-dinov3/assets/mhr_model.pt
+  dinov3_code: ../models/dinov3_code                          # DINOv3 backbone code used by SAM 3D Body
+  sam3d_body_code: ../container/sam-3d-body                   # SAM 3D Body source
+
+extract:                       # only with --rosbag-dir
+  video_fps: 20.0              # frame rate written into the mp4s
+  sync_tolerance_ms: 25        # max stamp difference between cameras in one frame
+
+detection:                     # pass 1 (GPU)
+  person_threshold: 0.3        # SAM3 "person" confidence
+  box_expansion: 1.2           # person box scale before SAM 3D Body
+  scene_prompts: [furniture, obstacle, stairs, door, column, wall]
+  scene_threshold: 0.5
+  scene_every: 20              # scene prompts on every Nth frame
+  body_batch: 256              # SAM 3D Body crops per call (256 fits 40 GB; 512 on 80 GB)
+
+tracking:                      # pass 2 (CPU)
+  dedup_radius_m: 0.25         # same-camera duplicates closer than this are dropped
+  association_gate_m: 1.1      # max distance for pairing detections across cameras
+  prediction_gate_m: 1.5       # max distance from a track's prediction
+  yaw_weight: 0.2              # metres of cost per radian of yaw difference (cross-camera pairing)
+  split_min_regret: 0.1        # margin for splitting a cluster whose members prefer different tracks
+  birth_gate_m: 1.5            # max distance for a new person to continue a pending birth
+  birth_max_gap_s: 0.15        # a pending birth must be seen in consecutive frames ...
+  birth_min_s: 1.0             # ... for this long before it becomes a track
+  coast_s: 1.0                 # tracks (and pending births) survive this long unseen
+  acceleration_noise: 1.5      # Kalman process noise (m/s^2)
+  measurement_noise_m: 0.35    # floor-position noise of one camera detection (std)
+  max_speed_mps: 3.0           # initial velocity uncertainty of a new track
+  yaw_gain: 0.25               # yaw smoothing per update
+
+output:
+  render: true                 # also write the camera/bird's-eye videos
+  fixed_lag_s: 1.0             # output delay that lets confirmed births relabel their earlier frames

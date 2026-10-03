@@ -1,0 +1,20 @@
+# Runtime for gdc_simplify: PyTorch + SAM 3D Body + SAM3 + mcap/OpenCV/ffmpeg. Build from this directory:
+#   docker build -f Containerfile -t gdc-pipeline:latest .         (add --build-arg TORCH_CUDA_ARCH_LIST=7.5 for RTX 20xx)
+# then push to a registry, or `apptainer build gdc-pipeline.sif docker-daemon://gdc-pipeline:latest` for TACC.
+ARG BASE_IMAGE=docker.io/pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
+FROM ${BASE_IMAGE}
+ARG TORCH_CUDA_ARCH_LIST="8.0;8.6;9.0+PTX"
+ARG SAM3_REVISION=5dd401d1c5c1d5c3eedff06d41b77af824517619
+ENV PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 CUDA_HOME=/usr/local/cuda FORCE_CUDA=1 TORCH_CUDA_ARCH_LIST=${TORCH_CUDA_ARCH_LIST} \
+    PYTHONPATH=/opt/sam-3d-body HF_HUB_OFFLINE=1 HF_HUB_DISABLE_XET=1
+
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential ca-certificates ffmpeg git git-lfs \
+        libegl1 libglib2.0-0 libgl1 libgles2 ninja-build && rm -rf /var/lib/apt/lists/*
+COPY requirements.txt /tmp/requirements.txt
+RUN python -m pip install --upgrade pip setuptools wheel && python -m pip uninstall -y ninja \
+    && python -m pip install -r /tmp/requirements.txt
+RUN git clone https://github.com/facebookresearch/sam3.git /opt/sam3 && git -C /opt/sam3 checkout ${SAM3_REVISION} \
+    && python -m pip install 'setuptools<70.0.0' && python -m pip install -e /opt/sam3
+COPY sam-3d-body /opt/sam-3d-body
+RUN python -c "import cv2, mcap, torch, sam_3d_body; from sam3.model_builder import build_sam3_image_model; print(torch.__version__, torch.version.cuda)"
+WORKDIR /work

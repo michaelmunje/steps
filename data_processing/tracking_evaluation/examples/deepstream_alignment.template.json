@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "sequence_id": "REPLACE_WITH_THE_SAME_GT_AND_PREDICTION_RECORDING",
+  "world_frame": {
+    "verified": false,
+    "gt_frame_id": "ground",
+    "prediction_frame_id": "ground",
+    "coordinate_units": "meters",
+    "calibration_evidence": "REPLACE: document the actual prediction-run calibration, GT calibration, world axes/origin and verification. A matching frame name is insufficient."
+  },
+  "temporal_alignment": {
+    "verified": false,
+    "header_origin_ns": null,
+    "scale": 1.0,
+    "offset_s": null,
+    "max_time_delta_s": null,
+    "evidence": "REPLACE: verified common events/source correspondence and uncertainty. Formula: source_rel_s = scale * ((header_ns - header_origin_ns) / 1e9) + offset_s. Do not use normalized playback progress or endpoint clamping."
+  },
+  "acknowledge_async_cached_tracks": false,
+  "absence_policy": "error"
+}

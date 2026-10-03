@@ -1,0 +1,29 @@
+{
+  "notes": [
+    "Dense 0–30 seconds inclusive at 10 Hz, using the reviewed nathan_dense_30s ICRA export.",
+    "Published SAM3 cleanup is a separate prediction variant with upstream ICRA cropping and yaw corrections. Original source fingerprint, publication receipt and selected-frame compatibility are verified."
+  ],
+  "selection": {
+    "start_s": 0.0,
+    "end_s": 30.0,
+    "frame_step": 2,
+    "frame_origin": 0,
+    "source_fps": 20.0
+  },
+  "roi": [-4, 14, -3, 15],
+  "metric_config": {
+    "max_distance_m": 1.0,
+    "similarity": "linear",
+    "similarity_scale_m": 1.0
+  },
+  "sequences": [
+    {
+      "name": "nathan_dense_30s_sam3_cleaned_icra",
+      "ground_truth": "../../investigations/eval_completion_20260915/gt/ground_truth.icra.json",
+      "predictions": "/robodata/gdc_atrium/ICRA_GDC/gdc_20260824_120001/gdc_20260824_120001_bag.frames.cleaned.jsonl",
+      "prediction_format": "sam3-cleaned",
+      "prediction_policy": "annotator-observed",
+      "sam3_original_source": "/robodata/gdc_atrium/ICRA_GDC/gdc_20260824_120001/gdc_20260824_120001_bag"
+    }
+  ]
+}
