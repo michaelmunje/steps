@@ -15,6 +15,8 @@ def times(name):
     if not run_timing.is_file():
         return None, None, None
     run = json.load(open(run_timing))
+    if "latency_ms" in run:  # realtime.py: one end-to-end number
+        return None, None, 1.0 / run["frames_per_second"]
     post = sum(run["seconds_per_frame"].values())
     cache_timing = Path(run["cache_dir"]) / "timing.json"
     if not cache_timing.is_file():
@@ -29,7 +31,7 @@ for directory in sys.argv[1:]:
     c = json.load(open(Path(directory) / "report.json"))["combined"]
     f1 = 2 * c["precision"] * c["recall"] / (c["precision"] + c["recall"])
     cells = [f"{100 * v:.2f}%" for v in (c["precision"], c["recall"], f1, c["IDF1"], c["HOTA"], c["clear"]["MOTA"])]
-    cells += [str(c["clear"]["IDSW"]), str(c["clear"]["Frag"]), f"{100 * c['MOTP_m']:.2f}", f"{c['yaw_MAE_deg']:.2f}"]
+    cells += [str(c["clear"]["IDSW"]), str(c["clear"]["Frag"]), f"{100 * c['MOTP_m']:.2f}", f"{c['yaw_MAE_deg']:.2f}" if c['yaw_MAE_deg'] is not None else "-"]
     cells += [f"{v:.2f}" if v is not None else "-" for v in times(Path(directory).name.rsplit("_", 1)[0])]
     rows.append([Path(directory).name] + cells)
 width = max(len(r[0]) for r in rows + [list(header)])

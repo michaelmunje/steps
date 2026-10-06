@@ -1,4 +1,4 @@
-# Pipeline config for pipeline/pipeline.py. Paths are relative to this file.
+# Config for pipeline/pipeline.py and pipeline/realtime.py. Paths are relative to this file.
 
 paths:
   cameras: .                                                  # cam_N_intrinsic_new.yaml files
@@ -8,6 +8,7 @@ paths:
   mhr_model: ../models/sam-3d-body-dinov3/assets/mhr_model.pt
   dinov3_code: ../models/dinov3_code                          # DINOv3 backbone code used by SAM 3D Body
   sam3d_body_code: ../container/sam-3d-body                   # SAM 3D Body source
+  yolo_detector: ../models/yolo/yolo26m.engine                # realtime.py: YOLO26m TensorRT engine (README) or yolo26m.pt
 
 extract:                       # only with --rosbag-dir
   video_fps: 20.0              # frame rate written into the mp4s
@@ -35,6 +36,16 @@ tracking:                      # pass 2 (CPU)
   measurement_noise_m: 0.35    # floor-position noise of one camera detection (std)
   max_speed_mps: 3.0           # initial velocity uncertainty of a new track
   yaw_gain: 0.25               # yaw smoothing per update
+
+realtime:                      # pipeline/realtime.py
+  image_size: 1280             # YOLO input size (pixels, longer side)
+  min_confidence: 0.4          # YOLO person confidence
+  foot_raise: 0.077            # foot point above the box bottom, in box heights
+  tracking:                    # overrides of `tracking` for box-based floor positions
+    measurement_noise_m: 0.85
+    acceleration_noise: 0.35
+    coast_s: 3.0
+    association_gate_m: 0.7
 
 output:
   render: true                 # also write the camera/bird's-eye videos

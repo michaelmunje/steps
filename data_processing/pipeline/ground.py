@@ -1,8 +1,20 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from rectify import pixel_to_ground, sam_yaw_to_ground
+
+
+@dataclass
+class RawDetection:
+    bbox_xyxy: np.ndarray
+    keypoints_2d: np.ndarray
+    keypoints_3d: np.ndarray = None
+    global_rot_zyx: np.ndarray = None
+    confidence: float = 1.0
+    instance_mask: np.ndarray = None
+    mask_confidence: float = None
+    model_fields: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -116,3 +128,35 @@ def project_detections(raw_detections, camera, timestamp_ns):
             ground_yaw=sam_yaw_to_ground(raw.global_rot_zyx, camera),
             detection_id=f"{timestamp_ns}:cam{camera['index']}:det{index}"))
     return projected
+
+
+def feet_in_view(boxes, height):
+    """Per box: its bottom is neither cut by the image bottom nor covered by another box whose bottom is lower (a person in front)."""
+    box_heights = boxes[:, 3] - boxes[:, 1]
+    x, y = (boxes[:, 0] + boxes[:, 2]) / 2, boxes[:, 3] - 0.05 * box_heights
+    covered = ((boxes[None, :, 0] <= x[:, None]) & (x[:, None] <= boxes[None, :, 2]) & (boxes[None, :, 1] <= y[:, None])
+               & (y[:, None] <= boxes[None, :, 3]) & (boxes[None, :, 3] > (boxes[:, 3] + 0.03 * box_heights)[:, None]))
+    return (boxes[:, 3] < height - 2) & ~covered.any(axis=1)
+
+
+def project_boxes(boxes, scores, camera, timestamp_ns, foot_raise):
+    """Person boxes of one camera -> (RawDetections of the boxes that pass box_quality_ok, ProjectedDetections of those whose feet are
+    in view): the foot point is the box's bottom centre raised by foot_raise box heights (mid-foot, not the sole edge), intersected
+    with the floor."""
+    keep = [i for i, box in enumerate(boxes) if box_quality_ok(box, camera["width"], camera["height"])]
+    boxes, scores = boxes[keep], scores[keep]
+    visible = feet_in_view(boxes, camera["height"])
+    raws, projected = [], []
+    for index, (box, score) in enumerate(zip(boxes, scores)):
+        raw = RawDetection(bbox_xyxy=box.astype(np.float32), keypoints_2d=None, confidence=float(score),
+                           model_fields={"detector_metadata": {"raw_bbox": box}})
+        raws.append(raw)
+        if not visible[index]:
+            continue
+        ground_xy = pixel_to_ground(camera, ((box[0] + box[2]) / 2, box[3] - foot_raise * (box[3] - box[1])))
+        if ground_xy is None or not np.isfinite(ground_xy).all() or float(np.linalg.norm(ground_xy)) > 50.0:
+            continue
+        projected.append(ProjectedDetection(
+            camera_index=camera["index"], timestamp_ns=timestamp_ns, raw=raw, foot_pixel_uv=np.array([(box[0] + box[2]) / 2, box[3]]),
+            ground_xy=np.asarray(ground_xy, dtype=np.float64), detection_id=f"{timestamp_ns}:cam{camera['index']}:det{index}"))
+    return raws, projected
