@@ -1,4 +1,4 @@
-# Runtime for gdc_simplify: PyTorch + SAM 3D Body + SAM3 + mcap/OpenCV/ffmpeg. Build from this directory:
+# Runtime for gdc_simplify: PyTorch + SAM 3D Body + SAM3 + YOLO/TensorRT + mcap/OpenCV/ffmpeg. Build from this directory:
 #   docker build -f Containerfile -t gdc-pipeline:latest .         (add --build-arg TORCH_CUDA_ARCH_LIST=7.5 for RTX 20xx)
 # then push to a registry, or `apptainer build gdc-pipeline.sif docker-daemon://gdc-pipeline:latest` for TACC.
 ARG BASE_IMAGE=docker.io/pytorch/pytorch:2.7.1-cuda12.8-cudnn9-devel
@@ -12,9 +12,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends build-essential
         libegl1 libglib2.0-0 libgl1 libgles2 ninja-build && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt /tmp/requirements.txt
 RUN python -m pip install --upgrade pip setuptools wheel && python -m pip uninstall -y ninja \
-    && python -m pip install -r /tmp/requirements.txt
+    && python -m pip install -r /tmp/requirements.txt && python -m pip install --no-deps ultralytics==8.4.173 ultralytics-thop
 RUN git clone https://github.com/facebookresearch/sam3.git /opt/sam3 && git -C /opt/sam3 checkout ${SAM3_REVISION} \
     && python -m pip install 'setuptools<70.0.0' && python -m pip install -e /opt/sam3
 COPY sam-3d-body /opt/sam-3d-body
-RUN python -c "import cv2, mcap, torch, sam_3d_body; from sam3.model_builder import build_sam3_image_model; print(torch.__version__, torch.version.cuda)"
+RUN python -c "import cv2, mcap, torch, sam_3d_body, tensorrt, ultralytics; from sam3.model_builder import build_sam3_image_model; print(torch.__version__, torch.version.cuda)"
 WORKDIR /work

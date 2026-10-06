@@ -1,30 +1,17 @@
 import hashlib
 import json
 import math
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
-from ground import box_quality_ok
+from ground import RawDetection, box_quality_ok
 
 SPECIAL = "__atrium_cache_value__"
 MHR70_FOOT_CONTACT = {
     "left_indices": [15, 16, 17], "right_indices": [18, 19, 20], "fallback_indices": [13, 14], "pooled_indices": [],
     "contact_source": "toe_heel_midpoint", "contact_quality": 1.0, "fallback_source": "ankles", "fallback_quality": 0.7,
 }
-
-
-@dataclass
-class RawDetection:
-    bbox_xyxy: np.ndarray
-    keypoints_2d: np.ndarray
-    keypoints_3d: np.ndarray = None
-    global_rot_zyx: np.ndarray = None
-    confidence: float = 1.0
-    instance_mask: np.ndarray = None
-    mask_confidence: float = None
-    model_fields: dict = field(default_factory=dict)
 
 
 def from_json(value):

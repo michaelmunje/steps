@@ -150,18 +150,15 @@ def complete_link_clusters(observations, max_distance_m, yaw_weight):
             costs[:len(left), len(right):] = max_distance_m / 2.0
             costs[len(left):, :len(right)] = max_distance_m / 2.0
             costs[len(left):, len(right):] = 0.0
-            valid = np.zeros((len(left), len(right)), dtype=bool)
-            for row, i in enumerate(left):
-                for column, j in enumerate(right):
-                    distance = float(np.linalg.norm(observations[i].ground_xy - observations[j].ground_xy))
-                    if distance > max_distance_m:
-                        continue
-                    valid[row, column] = True
-                    cost = distance
-                    yi, yj = observations[i].ground_yaw, observations[j].ground_yaw
-                    if yi is not None and yj is not None and np.isfinite(yi) and np.isfinite(yj):
-                        cost += yaw_weight * axial_yaw_difference(float(yi), float(yj))
-                    costs[row, column] = cost
+            left_xy = np.array([observations[i].ground_xy for i in left], dtype=np.float64)
+            right_xy = np.array([observations[j].ground_xy for j in right], dtype=np.float64)
+            distances = np.sqrt(((left_xy[:, None, :] - right_xy[None, :, :]) ** 2).sum(axis=2))
+            valid = distances <= max_distance_m
+            costs[:len(left), :len(right)][valid] = distances[valid]
+            for row, column in zip(*np.nonzero(valid)):
+                yi, yj = observations[left[row]].ground_yaw, observations[right[column]].ground_yaw
+                if yi is not None and yj is not None and np.isfinite(yi) and np.isfinite(yj):
+                    costs[row, column] += yaw_weight * axial_yaw_difference(float(yi), float(yj))
             rows, columns = linear_sum_assignment(costs)
             for row, column in zip(rows.tolist(), columns.tolist()):
                 if row >= len(left) or column >= len(right) or not valid[row, column]:
@@ -348,18 +345,23 @@ class Tracker:
             for track_id, track in sorted(self.tracks.items())]
 
 
-def prediction_cost(observation, prediction, prediction_gate, noise):
-    """(raw distance, metre-equivalent Mahalanobis distance + covariance-volume cost, or None beyond prediction_gate) of one camera
-    observation vs a global track prediction."""
-    innovation = np.asarray(observation.ground_xy, dtype=np.float64) - prediction.position_ground_xy
-    distance = float(np.linalg.norm(innovation))
-    if distance > prediction_gate:
-        return distance, None
+def prediction_costs(observations, predictions, prediction_gate, noise):
+    """(observations x predictions) matrix of metre-equivalent Mahalanobis distance + covariance-volume cost of each camera observation
+    vs each global track prediction; NaN where the raw distance is beyond prediction_gate."""
+    costs = np.full((len(observations), len(predictions)), np.nan)
+    if not observations or not predictions:
+        return costs
     R, measurement_logdet, scale = noise
-    S = prediction.position_covariance + R
-    nis = float(innovation.T @ np.linalg.solve(S, innovation))
-    _, logdet = np.linalg.slogdet(S)
-    return distance, float(scale * np.sqrt(max(0.0, nis)) + 0.5 * scale * max(0.0, logdet - measurement_logdet))
+    innovation = (np.array([o.ground_xy for o in observations], dtype=np.float64)[:, None, :]
+                  - np.array([p.position_ground_xy for p in predictions], dtype=np.float64)[None, :, :])
+    S = np.array([p.position_covariance for p in predictions], dtype=np.float64) + R
+    determinant = S[:, 0, 0] * S[:, 1, 1] - S[:, 0, 1] * S[:, 1, 0]
+    x, y = innovation[..., 0], innovation[..., 1]
+    nis = (S[:, 1, 1] * x * x - (S[:, 0, 1] + S[:, 1, 0]) * x * y + S[:, 0, 0] * y * y) / determinant  # innovation^T S^-1 innovation
+    cost = scale * np.sqrt(np.maximum(0.0, nis)) + 0.5 * scale * np.maximum(0.0, np.log(determinant) - measurement_logdet)
+    inside = np.sqrt(x * x + y * y) <= prediction_gate
+    costs[inside] = cost[inside]
+    return costs
 
 
 def fuse_cluster(members, cluster_index, predicted_track_id):
@@ -390,14 +392,11 @@ def associate_and_fuse(observations, predictions, noise, association_gate, predi
         regret = max(0.0, min([prediction_gate] + [c for c, _ in costs[1:]]) - best_cost)
         return best if best_cost < prediction_gate and regret > 1e-12 and regret + 1e-12 >= min_regret else None
 
+    cost_matrix = prediction_costs(observations, predictions, prediction_gate, noise)
     strong_by_observation = {}
-    for index, observation in enumerate(observations):
-        costs = []
-        for prediction in predictions:
-            distance, cost = prediction_cost(observation, prediction, prediction_gate, noise)
-            if distance <= prediction_gate and cost is not None:
-                costs.append((cost, prediction.track_id))
-        best = strong_best(costs)
+    for index in range(len(observations)):
+        columns = np.flatnonzero(~np.isnan(cost_matrix[index]))
+        best = strong_best([(float(cost_matrix[index, c]), predictions[c].track_id) for c in columns])
         if best is not None:
             strong_by_observation[index] = best
 
@@ -419,17 +418,10 @@ def associate_and_fuse(observations, predictions, noise, association_gate, predi
         pair_costs = {}
         max_pair = prediction_gate + yaw_weight * (np.pi / 2.0)
         for row, cluster in enumerate(clusters):
-            for column, prediction in enumerate(predictions):
-                member_costs = []
-                for i in cluster:
-                    distance, cost = prediction_cost(observations[i], prediction, prediction_gate, noise)
-                    if distance > prediction_gate or cost is None:
-                        break
-                    member_costs.append(cost)
-                if len(member_costs) != len(cluster):
-                    continue
-                pair_costs[(row, column)] = float(np.mean(member_costs))
-                max_pair = max(max_pair, pair_costs[(row, column)])
+            member_costs = cost_matrix[cluster]  # (members, predictions); a prediction needs every member inside its gate
+            for column in np.flatnonzero(~np.isnan(member_costs).any(axis=0)):
+                pair_costs[(row, int(column))] = float(np.mean(member_costs[:, column]))
+                max_pair = max(max_pair, pair_costs[(row, int(column))])
 
         n_rows, n_columns = len(clusters), len(predictions)
         invalid = (max_pair + prediction_gate + 1.0) * (n_rows + n_columns + 1)

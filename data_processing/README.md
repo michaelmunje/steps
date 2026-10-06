@@ -23,6 +23,32 @@ python pipeline/pipeline.py --config config/pipeline.yaml --mp4-dir /path/to/vid
 
 Rerunning the same command reuses the GPU results in `outputs/myrun/cache`.
 
+## Real-time pipeline
+Six cameras -> YOLO26m person boxes -> floor positions -> multi-camera tracking -> `frames.jsonl`, one frame at a time, without SAM
+(so no 3D keypoints or headings). On one A100 it keeps up with the cameras' 20 Hz: 30 frames/s throughput, 45 ms median from a frame's
+arrival to its output.
+```bash
+python pipeline/realtime.py --config config/pipeline.yaml --mp4-dir /path/to/videos --output-dir outputs/fast
+```
+- `--mp4-dir`: extracted videos (`pipeline/pipeline.py --rosbag-dir BAG --output-dir OUT --extract-only` writes them to `OUT/videos`),
+  replayed at their recorded rate. A frame that arrives while the previous one is still being processed is dropped; its output line
+  holds the tracks' predicted positions. `--no-pace` replays as fast as the pipeline runs (throughput test).
+- Output: `frames.jsonl` as below, without keypoints, headings or scene detections, written as each frame finishes;
+  `timing.json` (frames/s, dropped frames, latency).
+- Settings: the `realtime` section of the config (detector input size and confidence, foot point, tracking overrides).
+- Accuracy on the dense clip: HOTA 63 (full pipeline 96), floor positions within about 22 cm (box bottoms instead of foot keypoints).
+
+The detector is a TensorRT engine built once per GPU type and TensorRT version from `models/yolo/yolo26m.pt`
+([Ultralytics assets v8.4.0](https://github.com/ultralytics/assets/releases/download/v8.4.0/yolo26m.pt)):
+```bash
+python -c "from ultralytics import YOLO; YOLO('models/yolo/yolo26m.pt').export(format='engine', imgsz=1280, half=True, batch=6)"
+```
+(`paths.yolo_detector` can also point at `yolo26m.pt`; the network then takes about 31 instead of 16 ms per frame.)
+
+Streaming from ROS replaces the two ends of `pipeline/realtime.py`: the frame source (`frames.play` today) becomes a node that
+synchronizes the six image topics, rectifies the images (`rectify.rectify`, about 17 ms per frame on the CPU) into the pinned frame
+buffers and calls `on_frame(frame_index, timestamp_ns, {camera: stamp}, pixels)`; `JsonlPublisher` becomes a ROS publisher.
+
 ## Run on TACC
 One input per GPU, two GPUs per node (edit `GPUS_PER_NODE` for other nodes):
 ```bash
@@ -58,8 +84,10 @@ models/sam3/sam3.pt                                   SAM3 (huggingface.co/faceb
 models/sam-3d-body-dinov3/model.ckpt, model_config.yaml   SAM 3D Body (huggingface.co/facebook/sam-3d-body-dinov3)
 models/sam-3d-body-dinov3/assets/mhr_model.pt
 models/dinov3_code/                                   DINOv3 code (github.com/facebookresearch/dinov3)
+models/yolo/yolo26m.pt, yolo26m.engine                 real-time pipeline (see Real-time pipeline)
 ```
 The SAM3 and SAM 3D Body weights are under Meta's licenses (gated on Hugging Face).
+For the real-time pipeline also: `pip install --no-deps ultralytics==8.4.173 ultralytics-thop`.
 
 ## Check against the reviewed ground truth (dense test clip; needs `data/dense_35s.mcap` and `data/gt/`)
 ```bash

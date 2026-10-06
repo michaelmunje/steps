@@ -11,6 +11,8 @@ VIDEOS = {"camera": "camera_detections.mp4", "bev": "bev.mp4", "combined": "comb
 
 def jsonable(value):
     if isinstance(value, np.ndarray):
+        if value.dtype.kind in "iub" or (value.dtype.kind == "f" and np.isfinite(value).all()):
+            return value.tolist()  # no NaN or inf to replace
         return jsonable(value.tolist())
     if isinstance(value, np.generic):
         return jsonable(value.item())
